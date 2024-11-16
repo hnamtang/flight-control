@@ -13,3 +13,14 @@ Blon = [
      2.9885, -0.6188;
         0.0,  0.0518
 ];
+
+Clon = eye(size(Alon));
+
+Dlon = zeros(size(Alon, 1), size(Blon, 2));
+
+sys_lon = ss(Alon, Blon, Clon, Dlon);
+sys_lon.InputName = {'\delta_t', '\delta_e'};
+sys_lon.StateName = {'q', '\alpha', 'V', '\Theta'};
+sys_lon.OutputName = sys_lon.StateName;
+sys_lon.InputUnit = {'', 'rad'};
+sys_lon.OutputUnit = {'rad/s', 'rad', 'm/s', 'rad'};

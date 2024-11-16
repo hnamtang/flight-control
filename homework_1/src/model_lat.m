@@ -13,3 +13,14 @@ Blat = [
      -9.498, 1.9929;
         0.0,    0.0
 ];
+
+Clat = eye(size(Alat));
+
+Dlat = zeros(size(Alat, 1), size(Blat, 2));
+
+sys_lat = ss(Alat, Blat, Clat, Dlat);
+sys_lat.InputName = {'\delta_a', '\delta_r'};
+sys_lat.StateName = {'r', '\beta', 'p', '\Phi'};
+sys_lat.OutputName = sys_lat.StateName;
+sys_lat.InputUnit = {'rad', 'rad'};
+sys_lat.OutputUnit = {'rad/s', 'rad', 'm/s', 'rad'};
