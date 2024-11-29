@@ -19,8 +19,8 @@ Clon = eye(size(Alon));
 Dlon = zeros(size(Alon, 1), size(Blon, 2));
 
 sysLon = ss(Alon, Blon, Clon, Dlon);
-sysLon.InputName = {'\delta_t', '\delta_e'};
-sysLon.StateName = {'q', '\alpha', 'V', '\Theta'};
+sysLon.InputName = {'thrust', 'elevator'};
+sysLon.StateName = {'pitch rate', 'AOA', 'velocity', 'pitch angle'};
 sysLon.OutputName = sysLon.StateName;
 sysLon.InputUnit = {'-', 'rad'};
 sysLon.OutputUnit = {'rad/s', 'rad', 'm/s', 'rad'};
