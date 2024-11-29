@@ -46,7 +46,8 @@ function [resp, tOut] = plot_step_response(system, amplitudeStep, tEnd)
         end
         xlabel('t (s)', 'FontSize', 12);
         subplot(nOutputs, 1, 1);
-        title("Step Response (" + system.InputName{iInput} + ")", 'FontSize', 14);
+        title("Step Response (" + system.InputName{iInput} + " +" + ...
+            rad2deg(amplitudeStep) + " deg)", 'FontSize', 14);
     end
 
 end

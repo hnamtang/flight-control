@@ -13,7 +13,7 @@ clear all; close all; clc
 run("model_lat");
 
 
-%% 1. Controller Design - Yaw damper(zetaDR = 0.7)
+%% 1. Controller Design - Yaw Damper (zetaDR = 0.7)
 
 % Feedback: yaw rate -> rudder
 kRange = 0.5:0.001:1.5;
@@ -26,108 +26,57 @@ zetaDR = -cos(angle(poleDR));
 
 % Find the feedback gain for damping ratio of 0.7
 [~, idx] = min(abs(zetaDR - 0.7));
-%[~, idx] = min(abs(zetaDR - 0.98));
 Krdr = ss(kRange(idx), 'InputName', 'yaw rate', 'OutputName', 'rudder');
 
 % Closed loop system with yaw damper
-sysLatYawDamper = feedback(sysLat, Krdr, 'name', +1);  % positive feedback
+sysLatYawDamper = feedback(sysLat, Krdr, 'name', +1);
 
 
-%% 2. Problem and solution of intended turn with yaw damper
+%% 2. Problem and Solution in Case of Intended Turn with Yaw Damper
 
 % Washout filter
 tauWashoutFilter = 4;
 washoutFilter = generate_washout_filter(tauWashoutFilter);
 
-% Feedback: yaw rate -> rudder
-kRange = 0.5:0.001:1.5;
-poles = rlocus(-washoutFilter * sysLat('yaw rate', 'rudder'), kRange);
-poleDR = poles(imag(poles) > 0);
+% Augment the aircraft state space model with washout filter
+sysLatAug = connect(sysLat, washoutFilter, ...
+    sysLat.InputName, [sysLat.OutputName; {'washed out yaw rate'}]);
+sysLatAug.OutputUnit{end} = 'rad/s';
 
-% Compute damping of Dutch roll
-zetaDR = -cos(angle(poleDR));
-
-% Find the feedback gain for damping ratio of 0.7
-[~, idx] = min(abs(zetaDR - 0.7));
-Krdr = ss(kRange(idx), 'InputName', 'washed out yaw rate', ...
-    'OutputName', 'rudder');
+% Feedback: washed out yaw rate -> rudder
+Krdr = get_feedback_gain(-sysLatAug('washed out yaw rate', 'rudder'), ...
+    0.7, 'Dutch roll', 0.5, 1.5);
 
 % Closed loop system with yaw damper and washout filter
-sysLatYawDamperWashout = feedback(sysLat, Krdr * washoutFilter, 'name', +1);
-
-% Feedback: bank angle -> aileron
-% Kphida = 0.2 (from root locus of sysLatYawDamperWashout)
-%Kphida = 0.1;  % from root locus of sysLatYawDamperWashout
-Kphida = ss(0.2, 'InputName', 'bank angle', 'OutputName', 'aileron');
-
-% Closed loop system with positive feedback
-sysLatClosedLoop = feedback(sysLatYawDamperWashout, Kphida, 'name', +1);
-
-% Simulation initial conditions
-% states: yaw rate, sideslip angle, roll rate, bank angle, washout state
-x0 = [0; 0; 0; deg2rad(5); 0];  % phi0 = 5 deg
+sysLatAugYawDamper = feedback(sysLatAug, Krdr, 2, 5, +1);
 
 
-%% 3. Verification - Feedback sideslip angle -> rudder
+% Feedback: bank angle -> aileron to stabilize spiral mode
+Kphida = 0.2;  % positive feedback, from root locus of sysLatAugYawDamper
 
-% Redesign lateral-directional controller
-% to achieve better coordinated turn
-
-% Feedback: yaw rate -> rudder
-kRange = 0.5:0.001:1.5;
-poles = rlocus(-washoutFilter * sysLat('yaw rate', 'rudder'), kRange);
-poleDR = poles(imag(poles) > 0);
-
-% Compute damping of Dutch roll
-zetaDR = -cos(angle(poleDR));
-
-% Find the feedback gain for damping ratio of 0.9
-[~, idx] = min(abs(zetaDR - 0.9));
-Krdr = ss(kRange(idx), 'InputName', 'washed out yaw rate', ...
-    'OutputName', 'rudder');
-
-% Closed loop system with yaw damper and washout filter
-sysLatYawDamperWashout = feedback(sysLat, Krdr * washoutFilter, 'name', +1);
+% Closed loop system with bank-angle feedback to aileron
+sysLatAugClosedLoop = feedback(sysLatAugYawDamper, Kphida, 1, 4, +1);
 
 
-% Feedback: bank angle -> aileron
-% Kphida = 0.25 (from root locus of sysLatYawDamperWashout)
-Kphida = ss(0.1, 'InputName', 'bank angle', 'OutputName', 'aileron');
 
-% Closed loop system with positive feedback
-sysLatClosedLoop = feedback(sysLatYawDamperWashout, Kphida, 'name', +1);
-
+%% 3. Verification
 
 % Feedback: sideslipe angle -> rudder
-kRange = 0.1:0.001:1.5;
-poles = rlocus(sysLatClosedLoop('sideslip angle', 'rudder'), kRange);
-poleDR = poles(imag(poles) > 0);
-
-% Compute damping of Dutch roll
-zetaDR = -cos(angle(poleDR));
-
-% Find the feedback gain for damping ratio of 0.7
-[~, idx] = min(abs(zetaDR - 0.7));
-Kbetadr = ss(kRange(idx), 'InputName', 'sideslip angle', ...
-    'OutputName', 'rudder');
+Kbetadr = get_feedback_gain(sysLatAugClosedLoop('sideslip angle', 'rudder'), ...
+    0.7, 'Dutch roll', 0.01, 1.0);  % negative feedback
 
 % Closed loop system with all feedback controllers
-sysLatCL = feedback(sysLatClosedLoop, Kbetadr, 'name', -1);
+sysLatAugCL = feedback(sysLatAugClosedLoop, Kbetadr, 2, 2, -1);
 
+% Aileron and rudder deflection
+Klat = [0, 0, 0, -Kphida, 0;
+        -Krdr, Kbetadr, 0, 0, Krdr];
 
-%% Simulation
-figure(); step(deg2rad(20) * sysLatCL, 20); grid on;
-set(findall(gcf,'Type','Line'),'LineWidth',1.5,'MarkerSize',9)
-
-figure(); step(deg2rad(20) * sysLat, 20); grid on;
-hold on; step(deg2rad(20) * sysLatYawDamper, 20);
-step(deg2rad(20) * sysLatYawDamperWashout, 20);
-step(deg2rad(20) * sysLatClosedLoop, 20);
-step(deg2rad(20) * sysLatCL, 20);
-legend('Lat', 'YawDamper', 'YDWashout', 'ClosedLoop', 'CL')
-title('Step response')
-set(findall(gcf,'Type','Line'),'LineWidth',1.5,'MarkerSize',9)
-
-rad2deg(dcgain(deg2rad(20) * sysLatCL))
-
-plot_doublet_response(sysLatCL, deg2rad(20), 20);
+Acl = sysLatAug.A - sysLatAug.B * Klat;
+Bcl = sysLatAug.B;
+uDefl = ss(Acl, Bcl, -Klat, eye(2));
+uDefl.StateName = sysLatAug.StateName;
+uDefl.OutputName = sysLatAug.InputName;
+uDefl.InputName = {'aileron cmd', 'rudder cmd'};
+uDefl.InputUnit = {'rad', 'rad'};
+uDefl.OutputUnit = {'rad', 'rad'};
