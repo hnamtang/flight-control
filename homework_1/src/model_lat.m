@@ -13,3 +13,14 @@ Blat = [
      -9.498, 1.9929;
         0.0,    0.0
 ];
+
+Clat = eye(size(Alat));
+
+Dlat = zeros(size(Alat, 1), size(Blat, 2));
+
+sysLat = ss(Alat, Blat, Clat, Dlat);
+sysLat.InputName = {'aileron', 'rudder'};
+sysLat.StateName = {'yaw rate', 'sideslip angle', 'roll rate', 'bank angle'};
+sysLat.OutputName = sysLat.StateName;
+sysLat.InputUnit = {'rad', 'rad'};
+sysLat.OutputUnit = {'rad/s', 'rad', 'rad/s', 'rad'};
