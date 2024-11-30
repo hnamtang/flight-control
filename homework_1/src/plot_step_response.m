@@ -41,12 +41,12 @@ function [resp, tOut] = plot_step_response(system, amplitudeStep, tEnd)
             subplot(nOutputs, 1, iOutput);
             plot(tOut, respConverted(:, iOutput, iInput), 'LineWidth', 1.5);
             grid on
-            ylabel(system.OutputName{iOutput} + " (" + ...
-                unitsConverted{iOutput} + ")", 'FontSize', 12);
+            ylabel(system.OutputName{iOutput} + ", " + ...
+                unitsConverted{iOutput}, 'FontSize', 12);
         end
-        xlabel('t (s)', 'FontSize', 12);
+        xlabel('t, s', 'FontSize', 12);
         subplot(nOutputs, 1, 1);
-        title("Step Response (" + system.InputName{iInput} + " +" + ...
+        title("Step Response (" + system.InputName{iInput} + ", +" + ...
             rad2deg(amplitudeStep) + " deg)", 'FontSize', 14);
     end
 

@@ -57,13 +57,13 @@ function [resp, tOut] = plot_doublet_response(system, amplitudeDoublet, tEnd)
             plot(tOut, rad2deg(input), 'LineWidth', 1, ...
                 'LineStyle', '--', 'Color', 'k');
             grid on
-            ylabel(system.OutputName{iOutput} + " (" + ...
-                unitsConverted{iOutput} + ")", 'FontSize', 12);
+            ylabel(system.OutputName{iOutput} + ", " + ...
+                unitsConverted{iOutput}, 'FontSize', 12);
         end
-        xlabel('t (s)', 'FontSize', 12);
+        xlabel('t, s', 'FontSize', 12);
         subplot(nOutputs, 1, 1);
         title("Doublet Response (" + system.InputName{iInput} + ...
-            " +-" + rad2deg(amplitudeDoublet) + " deg)", 'FontSize', 14);
+            ", +-" + rad2deg(amplitudeDoublet) + " deg)", 'FontSize', 14);
     end
 
 end
