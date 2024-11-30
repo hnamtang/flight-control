@@ -29,6 +29,9 @@ damping = -cos(angle(poleMode));
 
 if abs(damping(idx) - desiredDamping) <= 9e-4
     K = kRange(idx);
+    if any(real(poles(:, idx)) >= 0)
+        warning('Feedback gain K found, but closed-loop system is unstable.')
+    end
 else
     error(['Cannot find feedback gain K. Try changing the feedback sign, ' ...
         'increasing range of K, or changing the desired damping ratio.']);

@@ -7,8 +7,6 @@ function [resp, tOut] = plot_step_response(system, amplitudeStep, tEnd)
 %   - amplitudeStep in radian
 %   - tEnd in second
 %
-%   Author: H. N. Tang
-%
 %   Note: The property fields
 %       - InputName
 %       - OutputName
@@ -16,6 +14,8 @@ function [resp, tOut] = plot_step_response(system, amplitudeStep, tEnd)
 %       - InputUnit
 %       - OutputUnit
 %   must be specified.
+%
+%   Author: H. N. Tang
 
     nOutputs = size(system, 1);
     nInputs = size(system, 2);
