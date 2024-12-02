@@ -16,20 +16,11 @@ run("model_lat");
 %% 1. Controller Design - Yaw Damper (zetaDR = 0.7)
 
 % Feedback: yaw rate -> rudder
-kRange = 0.5:0.001:1.5;
-%kRange = 0.5:0.001:1.65;
-poles = rlocus(-sysLat('yaw rate', 'rudder'), kRange);
-poleDR = poles(imag(poles) > 0);
-
-% Compute damping of Dutch roll
-zetaDR = -cos(angle(poleDR));
-
-% Find the feedback gain for damping ratio of 0.7
-[~, idx] = min(abs(zetaDR - 0.7));
-Krdr = ss(kRange(idx), 'InputName', 'yaw rate', 'OutputName', 'rudder');
+Krdr = get_feedback_gain(-sysLat('yaw rate', 'rudder'), ...
+    0.7, 'Dutch roll', 0.5, 1.5);
 
 % Closed loop system with yaw damper
-sysLatYawDamper = feedback(sysLat, Krdr, 'name', +1);
+sysLatYawDamper = feedback(sysLat, Krdr, 2, 1, +1);
 
 
 %% 2. Problem and Solution in Case of Intended Turn with Yaw Damper
@@ -60,17 +51,24 @@ sysLatAugClosedLoop = feedback(sysLatAugYawDamper, Kphida, 1, 4, +1);
 
 
 %% 3. Verification
+% Redesign previous controllers to get better turn coordination
+% Feedback: washed out yaw rate -> rudder
+Krdr2 = get_feedback_gain(-sysLatAug('washed out yaw rate', 'rudder'), ...
+    0.99, 'Dutch roll', 0.5, 1.5);
+sysLatAugYawDamper2 = feedback(sysLatAug, Krdr2, 2, 5, +1);
+
+% Feedback: bank angle -> aileron to stabilize spiral mode
+Kphida2 = 0.2;
+sysLatAugClosedLoop2 = feedback(sysLatAugYawDamper2, Kphida2, 1, 4, +1);
 
 % Feedback: sideslipe angle -> rudder
-Kbetadr = get_feedback_gain(sysLatAugClosedLoop('sideslip angle', 'rudder'), ...
-    0.7, 'Dutch roll', 0.01, 1.0);  % negative feedback
-
-% Closed loop system with all feedback controllers
-sysLatAugCL = feedback(sysLatAugClosedLoop, Kbetadr, 2, 2, -1);
+Kbetadr2 = get_feedback_gain(sysLatAugClosedLoop2('sideslip angle', 'rudder'), ...
+    0.7, 'Dutch roll', 0.01, 2.0);
+sysLatAugCL2 = feedback(sysLatAugClosedLoop2, Kbetadr2, 2, 2, -1);
 
 % Aileron and rudder deflection
-Klat = [0, 0, 0, -Kphida, 0;
-        -Krdr, Kbetadr, 0, 0, Krdr];
+Klat = [0, 0, 0, -Kphida2, 0;
+        -Krdr2, Kbetadr2, 0, 0, Krdr2];
 
 Acl = sysLatAug.A - sysLatAug.B * Klat;
 Bcl = sysLatAug.B;

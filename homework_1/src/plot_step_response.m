@@ -18,14 +18,17 @@ function [resp, tOut] = plot_step_response(system, amplitudeStep, tEnd)
 %   Author: H. N. Tang
 
     nOutputs = size(system, 1);
+    if nOutputs > 4
+        nOutputs = 4;  % exclude washed out yaw rate from output plot
+    end
     nInputs = size(system, 2);
 
-    [resp, tOut] = step(amplitudeStep * system, tEnd);
+    [resp, tOut] = step(amplitudeStep * system(1:nOutputs, :), tEnd);
 
     % Conver rad, rad/s to deg, deg/s
     respConverted = resp;
-    indexRad = strncmp(system.OutputUnit, "rad", 3);  % find index of
-                                                      % outputs with unit rad
+    indexRad = strncmp(system.OutputUnit(1:nOutputs), "rad", 3);  % find index of
+                                                                  % outputs with unit rad
     respConverted(:, indexRad, :) = rad2deg(respConverted(:, indexRad, :));
     unitsConverted = regexprep(system.OutputUnit, "rad", "deg");
 

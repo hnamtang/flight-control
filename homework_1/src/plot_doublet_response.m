@@ -18,6 +18,9 @@ function [resp, tOut] = plot_doublet_response(system, amplitudeDoublet, tEnd)
 %   Author: H. N. Tang
 
     nOutputs = size(system, 1);
+    if nOutputs > 4
+        nOutputs = 4;  % exclude washed out yaw rate from output plot
+    end
     nInputs = size(system, 2);
 
     tOut = 0:0.01:tEnd;
@@ -32,13 +35,13 @@ function [resp, tOut] = plot_doublet_response(system, amplitudeDoublet, tEnd)
 
     resp = zeros(length(tOut), nOutputs, nInputs);
     for iInput = 1:nInputs
-        resp(:, :, iInput) = lsim(system, reshape(u(iInput, :, :), nInputs, length(tOut)), tOut);
+        resp(:, :, iInput) = lsim(system(1:nOutputs, :), reshape(u(iInput, :, :), nInputs, length(tOut)), tOut);
     end
 
     % Conver rad, rad/s to deg, deg/s
     respConverted = resp;
-    indexRad = strncmp(system.OutputUnit, "rad", 3);  % find index of
-                                                      % outputs with unit rad
+    indexRad = strncmp(system.OutputUnit(1:nOutputs), "rad", 3);  % find index of
+                                                           % outputs with unit rad
     respConverted(:, indexRad, :) = rad2deg(respConverted(:, indexRad, :));
     unitsConverted = regexprep(system.OutputUnit, "rad", "deg");
 
