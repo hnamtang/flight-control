@@ -42,11 +42,11 @@ Krdr = get_feedback_gain(-sysLatAug('washed out yaw rate', 'rudder'), ...
 sysLatAugYawDamper = feedback(sysLatAug, Krdr, 2, 5, +1);
 
 
-% Feedback: bank angle -> aileron to stabilize spiral mode
-Kphida = 0.2;  % positive feedback, from root locus of sysLatAugYawDamper
-
-% Closed loop system with bank-angle feedback to aileron
-sysLatAugClosedLoop = feedback(sysLatAugYawDamper, Kphida, 1, 4, +1);
+% % Feedback: bank angle -> aileron to stabilize spiral mode
+% Kphida = 0.2;  % positive feedback, from root locus of sysLatAugYawDamper
+% 
+% % Closed loop system with bank-angle feedback to aileron
+% sysLatAugClosedLoop = feedback(sysLatAugYawDamper, Kphida, 1, 4, +1);
 
 
 
@@ -57,12 +57,15 @@ Krdr2 = get_feedback_gain(-sysLatAug('washed out yaw rate', 'rudder'), ...
     0.99, 'Dutch roll', 0.5, 1.5);
 sysLatAugYawDamper2 = feedback(sysLatAug, Krdr2, 2, 5, +1);
 
-% Feedback: bank angle -> aileron to stabilize spiral mode
-Kphida2 = 0.2;
-sysLatAugClosedLoop2 = feedback(sysLatAugYawDamper2, Kphida2, 1, 4, +1);
+% % Feedback: bank angle -> aileron to stabilize spiral mode
+% Kphida2 = 0.2;
+% sysLatAugClosedLoop2 = feedback(sysLatAugYawDamper2, Kphida2, 1, 4, +1);
+sysLatAugClosedLoop2 = sysLatAugYawDamper2;
+Kphida2 = 0;
+
 
 % Feedback: sideslipe angle -> rudder
-Kbetadr2 = get_feedback_gain(sysLatAugClosedLoop2('sideslip angle', 'rudder'), ...
+Kbetadr2 = get_feedback_gain(sysLatAugClosedLoop2('sideslip', 'rudder'), ...
     0.7, 'Dutch roll', 0.01, 2.0);
 sysLatAugCL2 = feedback(sysLatAugClosedLoop2, Kbetadr2, 2, 2, -1);
 

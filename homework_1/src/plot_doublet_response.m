@@ -1,6 +1,6 @@
-function [resp, tOut] = plot_doublet_response(system, amplitudeDoublet, tEnd)
+function [resp, tOut] = plot_doublet_response(system, amplitudeDoublet, tEnd, boolSavePlot)
 %plot_doublet_response Plot response for doublet input of aircraft model.
-%   [resp, tOut] = plot_doublet_response(system_name, amplitudeDoublet, tEnd)
+%   [resp, tOut] = plot_doublet_response(system, amplitudeDoublet, tEnd, boolSavePlot)
 %   plots the response for double input of a dynamical system
 %   represented in state space form.
 %
@@ -16,6 +16,10 @@ function [resp, tOut] = plot_doublet_response(system, amplitudeDoublet, tEnd)
 %   must be specified.
 %
 %   Author: H. N. Tang
+
+    if nargin == 3
+        boolSavePlot = false;
+    end
 
     nOutputs = size(system, 1);
     if nOutputs > 4
@@ -65,8 +69,17 @@ function [resp, tOut] = plot_doublet_response(system, amplitudeDoublet, tEnd)
         end
         xlabel('t, s', 'FontSize', 12);
         subplot(nOutputs, 1, 1);
-        title("Doublet Response (" + system.InputName{iInput} + ...
-            ", +-" + rad2deg(amplitudeDoublet) + " deg)", 'FontSize', 14);
+        figTitle = "Doublet Response (" + system.InputName{iInput} + ...
+            ", +-" + rad2deg(amplitudeDoublet) + " deg)";
+        title(figTitle, 'FontSize', 14);
+
+        % Save plot
+        if boolSavePlot
+            systemName = inputname(1);
+            exportgraphics(gcf, ...
+                systemName + "_" + join(strsplit(figTitle), '_') + ".png", ...
+                'Resolution', 600);
+        end
     end
 
 end
