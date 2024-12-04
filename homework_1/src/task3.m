@@ -57,20 +57,14 @@ Krdr2 = get_feedback_gain(-sysLatAug('washed out yaw rate', 'rudder'), ...
     0.99, 'Dutch roll', 0.5, 1.5);
 sysLatAugYawDamper2 = feedback(sysLatAug, Krdr2, 2, 5, +1);
 
-% % Feedback: bank angle -> aileron to stabilize spiral mode
-% Kphida2 = 0.2;
-% sysLatAugClosedLoop2 = feedback(sysLatAugYawDamper2, Kphida2, 1, 4, +1);
-sysLatAugClosedLoop2 = sysLatAugYawDamper2;
-Kphida2 = 0;
-
 
 % Feedback: sideslipe angle -> rudder
-Kbetadr2 = get_feedback_gain(sysLatAugClosedLoop2('sideslip', 'rudder'), ...
+Kbetadr2 = get_feedback_gain(sysLatAugYawDamper2('sideslip', 'rudder'), ...
     0.7, 'Dutch roll', 0.01, 2.0);
-sysLatAugCL2 = feedback(sysLatAugClosedLoop2, Kbetadr2, 2, 2, -1);
+sysLatAugCL2 = feedback(sysLatAugYawDamper2, Kbetadr2, 2, 2, -1);
 
 % Aileron and rudder deflection
-Klat = [0, 0, 0, -Kphida2, 0;
+Klat = [0, 0, 0, 0, 0;
         -Krdr2, Kbetadr2, 0, 0, Krdr2];
 
 Acl = sysLatAug.A - sysLatAug.B * Klat;
