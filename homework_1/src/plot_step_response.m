@@ -1,6 +1,6 @@
-function [resp, tOut] = plot_step_response(system, amplitudeStep, tEnd)
+function [resp, tOut] = plot_step_response(system, amplitudeStep, tEnd, boolSavePlot)
 %plot_step_response Plot step response of aircraft model.
-%   [resp, tOut] = plot_step_response(system_name, amplitudeStep, tEnd)
+%   [resp, tOut] = plot_step_response(system, amplitudeStep, tEnd, boolSavePlot)
 %   plots the step response of a dynamical system
 %   represented in state space form.
 %
@@ -17,15 +17,22 @@ function [resp, tOut] = plot_step_response(system, amplitudeStep, tEnd)
 %
 %   Author: H. N. Tang
 
+    if nargin == 3
+        boolSavePlot = false;
+    end
+
     nOutputs = size(system, 1);
+    if nOutputs > 4
+        nOutputs = 4;  % exclude washed out yaw rate from output plot
+    end
     nInputs = size(system, 2);
 
-    [resp, tOut] = step(amplitudeStep * system, tEnd);
+    [resp, tOut] = step(amplitudeStep * system(1:nOutputs, :), tEnd);
 
     % Conver rad, rad/s to deg, deg/s
     respConverted = resp;
-    indexRad = strncmp(system.OutputUnit, "rad", 3);  % find index of
-                                                      % outputs with unit rad
+    indexRad = strncmp(system.OutputUnit(1:nOutputs), "rad", 3);  % find index of
+                                                                  % outputs with unit rad
     respConverted(:, indexRad, :) = rad2deg(respConverted(:, indexRad, :));
     unitsConverted = regexprep(system.OutputUnit, "rad", "deg");
 
@@ -46,8 +53,17 @@ function [resp, tOut] = plot_step_response(system, amplitudeStep, tEnd)
         end
         xlabel('t, s', 'FontSize', 12);
         subplot(nOutputs, 1, 1);
-        title("Step Response (" + system.InputName{iInput} + ", +" + ...
-            rad2deg(amplitudeStep) + " deg)", 'FontSize', 14);
+        figTitle = "Step Response (" + system.InputName{iInput} + ...
+            ", +-" + rad2deg(amplitudeStep) + " deg)";
+        title(figTitle, 'FontSize', 14);
+
+        % Save plot
+        if boolSavePlot
+            systemName = inputname(1);
+            exportgraphics(gcf, ...
+                systemName + "_" + join(strsplit(figTitle), '_') + ".png", ...
+                'Resolution', 600);
+        end
     end
 
 end
