@@ -1,6 +1,6 @@
-function [resp, tOut] = plot_step_response(system, amplitudeStep, tEnd, boolSavePlot)
+function [respConverted, tOut] = plot_step_response(system, amplitudeStep, tEnd, boolSavePlot)
 %plot_step_response Plot step response of aircraft model.
-%   [resp, tOut] = plot_step_response(system, amplitudeStep, tEnd, boolSavePlot)
+%   [respConverted, tOut] = plot_step_response(system, amplitudeStep, tEnd, boolSavePlot)
 %   plots the step response of a dynamical system
 %   represented in state space form.
 %
@@ -27,7 +27,8 @@ function [resp, tOut] = plot_step_response(system, amplitudeStep, tEnd, boolSave
     end
     nInputs = size(system, 2);
 
-    [resp, tOut] = step(amplitudeStep * system(1:nOutputs, :), tEnd);
+    t = 0:0.001:tEnd;
+    [resp, tOut] = step(amplitudeStep * system(1:nOutputs, :), t);
 
     % Conver rad, rad/s to deg, deg/s
     respConverted = resp;
@@ -51,7 +52,7 @@ function [resp, tOut] = plot_step_response(system, amplitudeStep, tEnd, boolSave
             ylabel(system.OutputName{iOutput} + ", " + ...
                 unitsConverted{iOutput}, 'FontSize', 12);
         end
-        xlabel('t, s', 'FontSize', 12);
+        xlabel('Time, s', 'FontSize', 12);
         subplot(nOutputs, 1, 1);
         figTitle = "Step Response (" + system.InputName{iInput} + ...
             ", +-" + rad2deg(amplitudeStep) + " deg)";

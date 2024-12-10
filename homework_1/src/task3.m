@@ -10,7 +10,8 @@
 %
 clear all; close all; clc
 
-run("model_lat");
+%run("model_lat");
+run('model_lat');
 
 
 %% 1. Controller Design - Yaw Damper (zetaDR = 0.7)
@@ -33,13 +34,14 @@ washoutFilter = generate_washout_filter(tauWashoutFilter);
 sysLatAug = connect(sysLat, washoutFilter, ...
     sysLat.InputName, [sysLat.OutputName; {'washed out yaw rate'}]);
 sysLatAug.OutputUnit{end} = 'rad/s';
+sysLatAug.B(1, 1) = -sysLatAug.B(1, 1);
 
 % Feedback: washed out yaw rate -> rudder
-Krdr = get_feedback_gain(-sysLatAug('washed out yaw rate', 'rudder'), ...
+Krdr1 = get_feedback_gain(-sysLatAug('washed out yaw rate', 'rudder'), ...
     0.7, 'Dutch roll', 0.5, 1.5);
 
 % Closed loop system with yaw damper and washout filter
-sysLatAugYawDamper = feedback(sysLatAug, Krdr, 2, 5, +1);
+sysLatAugYawDamper = feedback(sysLatAug, Krdr1, 2, 5, +1);
 
 
 % % Feedback: bank angle -> aileron to stabilize spiral mode
