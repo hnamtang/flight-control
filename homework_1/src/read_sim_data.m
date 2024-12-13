@@ -22,16 +22,17 @@ function simData = read_sim_data(fileID, motionType)
     motionType = lower(motionType);
     if contains(motionType, "lon", 'IgnoreCase', true)
         simData.duration = linspace(0, time(end) - time(1), length(time));
-        simData.altitude = interpolate(data.data.wd_hsl);  % [m]
+        simData.altitude = interpolate(data.data.wd_hsl/0.3048);  % [ft]
         simData.flightPathAngle = interpolate(data.data.wd_gamma);
         simData.AOA = interpolate(data.data.wd_al);
         simData.AOARate = interpolate(data.data.wd_alphdot);
-        simData.thrust = interpolate(data.data.wd_tnet1);
+        simData.thrust = interpolate(data.data.wd_n11); % Percentage N1
         simData.trueAirspeed = interpolate(data.data.wd_vtas);  % [m/s]
         simData.elevatorDefl = interpolate(data.data.wd_etalh);
         simData.pitchAngleEuler = interpolate(data.data.wd_theta);
         simData.pitchRateEuler = interpolate(data.data.wd_thetdot);
         simData.pitchRateBody = interpolate(data.data.wd_qb);
+        simData.rateOfClimb = interpolate(data.data.wd_we*196.85039370079); % [ft/min]
     elseif contains(motionType, "lat", 'IgnoreCase', true) || ...
             contains(motionType, "dir", 'IgnoreCase', true)    
         simData.duration = linspace(0, time(end) - time(1), length(time));
