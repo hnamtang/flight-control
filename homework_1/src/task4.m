@@ -6,7 +6,7 @@
 % Task 4 - Testing the controllers in the nonlinear simulation
 %
 % Author: H. N. Tang
-%
+
 clear all; close all; clc
 
 

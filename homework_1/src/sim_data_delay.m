@@ -1,6 +1,8 @@
 function dt = sim_data_delay(dataOL, dataCL, motionType)
-% Calculate time delay between signals.
-% Output is structure array with field names being relevant variables
+%   Calculate time delay between signals.
+%   Output is structure array with field names being relevant variables
+%
+%   Author: H. N. Tang
 
     if contains(motionType, "lon", "IgnoreCase", true)
         dt.altitude = finddelay(dataCL.altitude, dataOL.altitude);

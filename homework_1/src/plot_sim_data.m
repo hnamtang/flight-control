@@ -1,6 +1,8 @@
 function plot_sim_data(dataOL, dataCL, dt, motionType)
-% Plot comparison between OL and CL in flight simulator
-% Inputs: open loop, closed-loop, time adjust, motion type.
+%   Plot comparison between OL and CL in flight simulator
+%   Inputs: open loop, closed-loop, time adjust, motion type.
+%
+%   Author: H. N. Tang
 
     samplingFrequency = 50;  % Hz
 
@@ -117,7 +119,7 @@ function plot_sim_data(dataOL, dataCL, dt, motionType)
         grid on
         ylim([170, 215]);
         xlim([0, 200]);
-        ylabel('True air speed, kts', 'FontSize', 12);
+        ylabel('True airspeed, kts', 'FontSize', 12);
         xlabel('Flight duration, s', 'FontSize', 12);
         legend('without controller', 'with controller', ...
             'trim speed', 'speed tolerance', ...
@@ -141,7 +143,7 @@ function plot_sim_data(dataOL, dataCL, dt, motionType)
         grid on
         xlim([0, 200]);
         text(165, 260, 'start heading', 'FontSize', 12);
-        text(165, 600, 'end heading', 'FontSize', 12);
+        text(161.5, 600, 'target heading', 'FontSize', 12);
         ylabel('Yaw angle/Azimuth, deg', 'FontSize', 12);
         xlabel('Flight duration, s', 'FontSize', 12);
         legend('without controller', 'with controller', ...
