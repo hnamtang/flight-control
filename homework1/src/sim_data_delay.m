@@ -15,6 +15,7 @@ function dt = sim_data_delay(dataOL, dataCL, motionType)
         dt.pitchAngleEuler = finddelay(dataCL.pitchAngleEuler, dataOL.pitchAngleEuler);
         dt.pitchRateEuler = finddelay(dataCL.pitchRateEuler, dataOL.pitchRateEuler);
         dt.pitchRateBody = finddelay(dataCL.pitchRateBody, dataOL.pitchRateBody);
+        dt.rateOfClimb = finddelay(dataCL.rateOfClimb, dataOL.rateOfClimb);
     elseif contains(motionType, "lat", "IgnoreCase", true) || ...
             contains(motionType, "dir", "IgnoreCase", true)
         dt.sideslip = finddelay(dataCL.sideslip, dataOL.sideslip);

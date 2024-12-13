@@ -5,44 +5,68 @@ function plot_sim_data(dataOL, dataCL, dt, motionType)
 %   Author: H. N. Tang
 
     samplingFrequency = 50;  % Hz
+    font_size = 10;
 
     % Plot
     if contains(motionType, "lon", "IgnoreCase", true)
         figure();  % state variables
-        ax1 = subplot(4, 1, 1); hold on;
-        plot(dataOL.duration, dataOL.pitchRateBody, 'Color', 'b', ...
+        ax1 = subplot(6, 1, 1); hold on;
+        % ALTITUDE
+        plot(dataOL.duration, dataOL.altitude, 'Color', 'b', ...
             'LineWidth', 1.0, 'LineStyle', '-');
-        plot(dataCL.duration + dt.pitchRateBody/samplingFrequency, ...
-           dataCL.pitchRateBody, 'Color', 'r', 'LineWidth', 1.0, 'LineStyle', '-');
+        plot(dataCL.duration + dt.altitude/samplingFrequency, ...
+           dataCL.altitude, 'Color', 'r', 'LineWidth', 1.0, 'LineStyle', '-');
         grid on
-        ylabel('Pitch rate, deg/s', 'FontSize', 12);
-
-        ax2 = subplot(4, 1, 2); hold on;
-        plot(dataOL.duration, dataOL.AOA, 'Color', 'b', ...
+        ylabel('ALT, ft', 'FontSize', font_size);
+        
+        % RATE OF CLIMB
+        ax2 = subplot(6, 1, 2); hold on;
+        plot(dataOL.duration, dataOL.rateOfClimb, 'Color', 'b', ...
             'LineWidth', 1.0, 'LineStyle', '-');
-        plot(dataCL.duration + dt.AOA/samplingFrequency, ...
-            dataCL.AOA, 'Color', 'r', 'LineWidth', 1.0, 'LineStyle', '-');
+        plot(dataCL.duration + dt.rateOfClimb/samplingFrequency, ...
+            dataCL.rateOfClimb, 'Color', 'r', 'LineWidth', 1.0, 'LineStyle', '-');
         grid on
-        ylabel('AoA, deg', 'FontSize', 12);
-
-        ax3 = subplot(4, 1, 3); hold on;
+        ylabel('ROC, ft/min', 'FontSize', font_size);
+        
+        % V_TAS
+        ax3 = subplot(6, 1, 3); hold on;
         plot(dataOL.duration, dataOL.trueAirspeed, 'Color', 'b', ...
             'LineWidth', 1.0, 'LineStyle', '-');
         plot(dataCL.duration + dt.trueAirspeed/samplingFrequency, ...
             convvel(dataCL.trueAirspeed, 'm/s', 'kts'), 'Color', 'r', ...
             'LineWidth', 1.0, 'LineStyle', '-');
         grid on
-        ylabel('Velocity, kts', 'FontSize', 12);
-
-        ax4 = subplot(4, 1, 4); hold on;
-        plot(dataOL.duration, dataOL.pitchAngleEuler, 'Color', 'b', ...
+        ylabel('V_{TAS}, kts', 'FontSize', font_size);
+        
+        % AOA
+        ax4 = subplot(6, 1, 4); hold on;
+        plot(dataOL.duration, dataOL.AOA, 'Color', 'b', ...
             'LineWidth', 1.0, 'LineStyle', '-');
-        plot(dataCL.duration + dt.pitchAngleEuler/samplingFrequency, ...
-            dataCL.pitchAngleEuler, 'Color', 'r', 'LineWidth', 1.0, 'LineStyle', '-');
+        plot(dataCL.duration + dt.AOA/samplingFrequency, ...
+            dataCL.AOA, 'Color', 'r', 'LineWidth', 1.0, 'LineStyle', '-');
         grid on
-        ylabel('Pitch angle, deg', 'FontSize', 12);
-        xlabel('Flight duration, s', 'FontSize', 12);
+        ylabel('\alpha, deg', 'FontSize', font_size);
+
+        % THRUST
+        ax5 = subplot(6, 1, 5); hold on;
+        plot(dataOL.duration, dataOL.thrust, 'Color', 'b', ...
+            'LineWidth', 1.0, 'LineStyle', '-');
+        plot(dataCL.duration + dt.thrust/samplingFrequency, ...
+            dataCL.thrust, 'Color', 'r', 'LineWidth', 1.0, 'LineStyle', '-');
+        grid on
+        ylabel('\delta_t, %', 'FontSize', font_size);
+
+        % ELEVATOR
+        ax6 = subplot(6, 1, 6); hold on;
+        plot(dataOL.duration, dataOL.elevatorDefl, 'Color', 'b', ...
+            'LineWidth', 1.0, 'LineStyle', '-');
+        plot(dataCL.duration + dt.elevatorDefl/samplingFrequency, ...
+            dataCL.elevatorDefl, 'Color', 'r', 'LineWidth', 1.0, 'LineStyle', '-');
+        grid on
+        ylabel('\delta_e, deg', 'FontSize', font_size);
+        xlabel('Flight duration, s', 'FontSize', font_size);
         legend('without controller', 'with controller', 'Location', 'southeast');
+
     elseif contains(motionType, "lat", "IgnoreCase", true) || ...
             contains(motionType, "dir", "IgnoreCase", true)
         figure();  % state variables
@@ -175,6 +199,6 @@ function plot_sim_data(dataOL, dataCL, dt, motionType)
     else
         error("invalid motion type.");
     end
-    linkaxes([ax1, ax2, ax3, ax4],'x')
+    linkaxes([ax1, ax2, ax3, ax4, ax5, ax6],'x')
 
 end
