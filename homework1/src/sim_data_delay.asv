@@ -1,0 +1,14 @@
+function dt = sim_data_delay(dataOL, dataCL)
+% Calculate time delay between signals.
+% Output is structure array with field names being relevant variables
+
+    dt.sideslip = finddelay(dataCL.sideslip, dataOL.sideslip);
+    dt.trueAirspeed = finddelay(dataCL.trueAirspeed, dataOL.trueAirspeed);
+    dt.aileronDefl = finddelay(dataCL.aileronDefl, dataOL.aileronDefl);
+    dt.rudderDefl = finddelay(dataCL.rudderDefl, dataOL.rudderDefl);
+    dt.rollAngleEuler = finddelay(dataCL.rollAngleEuler, dataOL.rollAngleEuler);
+    dt.rollRateBody = finddelay(dataCL.rollRateBody, dataOL.rollRateBody);
+    dt.yawAngleEuler = finddelay(dataCL.yawAngleEuler, dataOL.yawAngleEuler);
+    dt.yawRateBody = finddelay(dataCL.yawRateBody, dataOL.yawRateBody);
+
+end
