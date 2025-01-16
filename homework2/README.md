@@ -1,8 +1,7 @@
 # Flight Control
 
-## Homework 2 -
+## Homework 2 - Analysis of Dynamic Aircraft Behavior and Design of Control Systems for Manual and Automatic Flight
 
 <u>Deadlines</u>:
 
-- xx.xx.2025: X
-- xx.xx.2025: Report submission
+- 21.02.2025: Report submission
