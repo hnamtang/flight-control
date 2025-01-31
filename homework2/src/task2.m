@@ -12,6 +12,15 @@ run('VFTE_state_space');
 
 s = tf('s');
 
+% Extract relevant variables
+sysLat = ss(G.A(5:8,5:8), G.B(5:8,3:4), G.C([5:8,11],5:8), G.D([5:8,11],3:4));
+sysLat.StateName = G.StateName(5:8);
+sysLat.InputName = G.InputName(3:4);
+sysLat.OutputName = G.OutputName([5:8,11]);
+
+% sysLat = G([5:8, 11],3:4);
+
+
 % Filters
 T_p = 0.1;
 GF_p = 1 / (T_p*s+1);
@@ -27,11 +36,13 @@ GF_r.InputName = "\delta r";
 GF_r.OutputName = "\delta rf";
 
 
-sysLat = G([5:8, 11], 3:4);
+% Lateral dynamics with all pre-defined filters
+sysLatF = connect(sysLat, GF_r, GF_p, ...
+    sysLat.InputName, [sysLat.OutputName; GF_r.OutputName; GF_p.OutputName]);
 
 
-%% Part 2) Coordinated turn
-K_zetaxi = tf(-dcgain(sysLat('\delta \beta','\delta \xi')) / dcgain(sysLat('\delta \beta','\delta \zeta')));
+%% Part 2) Coordinated Turn
+K_zetaxi = tf(-dcgain(sysLatF('\delta \beta','\delta \xi')) / dcgain(sysLatF('\delta \beta','\delta \zeta')));
 K_zetaxi.InputName = "\delta \xi cmd";
 K_zetaxi.OutputName = "yK \zeta \xi";
 
@@ -42,161 +53,162 @@ K_xizeta.OutputName = "yK \xi \zeta";
 S1 = sumblk("\delta \xi = \delta \xi cmd + yK \xi \zeta");
 S2 = sumblk("\delta \zeta = \delta \zeta cmd + yK \zeta \xi");
 
-sys1 = connect(K_zetaxi, K_xizeta, sysLat, S1, S2, ...
+sys1 = connect(K_zetaxi, K_xizeta, sysLatF, S1, S2, ...
     {'\delta \xi cmd', '\delta \zeta cmd'}, ...
-    [sysLat.OutputName; "\delta \xi"; "\delta \zeta"]);
+    [sysLatF.OutputName; '\delta \xi'; '\delta \zeta']);
 
 % DONE.
 
 
-%% Part 3) Yaw rate feedback
-sys2 = connect(sys1, GF_r, ...
-    sys1.InputName, [sys1.OutputName; GF_r.OutputName]);
+%% Part 3) Yaw Damper
+ 
+% figure(); rlocus(-sys1('\delta rf','\delta \zeta cmd')); grid on
+% set(findall(gcf, 'Type', 'Line'), 'LineWidth', 1.5, 'MarkerSize', 9)
 
-% rlocus(-sys2('\delta rf', '\delta \zeta cmd'));
-%K_zetar = tf(-0.25);
-%K_zetar = tf(-0.15);
-%K_zetar = tf(-0.078);
-%K_zetar = tf(-0.17);
-K_zetar = tf(-0.172);
+% Find k_zetar to achieve max. Dutch Roll damping
+Krlocus = linspace(0.13, 0.3, 1000);
+R = rlocus(-sys1('\delta rf','\delta \zeta cmd'), Krlocus);
+zeta_DR = -cos(angle(R(find(imag(R(:,1)) ~= 0, 1),:)));
+[~, idx] = max(zeta_DR);
+% k_zetar = Krlocus(idx);
+k_zetar = 0.08;  % test1: damping 0.3 -> max k_xip 0.0078
+K_zetar = tf(-k_zetar);
 K_zetar.InputName = GF_r.OutputName;
-K_zetar.OutputName = "yK \zeta r";
+K_zetar.OutputName = "yK zetar";
 
-S3 = sumblk("\delta \zeta cmd = \delta \zeta input - yK \zeta r");
-sys3 = connect(sys2, K_zetar, S3, ...
-    [sys1.InputName(1); "\delta \zeta input"], sys2.OutputName);
+S3 = sumblk("\delta \zeta cmd = \delta \zeta input - yK zetar");
+
+sys1cl = connect(sys1, K_zetar, S3, ...
+    [sys1.InputName(1); S3.InputName(1)], sys1.OutputName);
 
 % DONE.
 
 
-%% Part 4) Roll rate feedback
+%% Part 4) Roll Damper
 
-% max aileron deflection of 20°
-u = deg2rad(20);
+% figure(); rlocus(-sys1cl('\delta pf','\delta \xi cmd')); grid on
+% set(findall(gcf, 'Type', 'Line'), 'LineWidth', 1.5, 'MarkerSize', 9)
 
-sys4 = connect(sys3, GF_p, ...
-    sys3.InputName, [sys3.OutputName; GF_p.OutputName]);
-
-%rlocus(-sys4('\delta pf', '\delta \xi cmd'));
-
-%K_xip = tf(-0.0061);
-%K_xip = tf(-0.0024);
-%K_xip = tf(-0.0071);
-K_xip = tf(-0.00724);
+k_xip = 0.003;  % origin, also test1
+K_xip = tf(-k_xip);
 K_xip.InputName = GF_p.OutputName;
-K_xip.OutputName = "yK \xi p";
+K_xip.OutputName = "yK xip";
 
-S4 = sumblk("\delta \xi cmd = \delta \xi input - yK \xi p");
-sys5 = connect(sys4, K_xip, S4, ...
-    {"\delta \xi input", "\delta \zeta input"}, sys4.OutputName);
+S4 = sumblk("\delta \xi cmd = \delta \xi input - yK xip");
 
-
-
-% Problem: roll is too sensitive. What to do?
-
-
-% TODO: redesign K_xip according to MIL-F-8785C
-
-
-
-
-
-%% Part 5) Outer loop - Bank angle command
-
-% Design 1:
-% % Only P-controller
-% % First, calculate gain margin
-% [Gm, Pm, Wcg, Wcp] = margin(-sys5('\delta \Phi', '\delta \xi input'));
-% K_PhiP = tf(-Gm / db2mag(6));  % gain margin of S (requirement: 6 dB gain margin)
-% %K_PhiP = tf(0.002);  % from root locus
-% %K_PhiP = tf(-0.025);  % from root locus
-% %K_PhiP = tf(-0.049);  % from root locus
-% K_PhiP.InputName = "e \Phi dot";
-% K_PhiP.OutputName = "yK \Phi P";
-% 
-% S5 = tf(1); S5.InputName = K_PhiP.OutputName; S5.OutputName = sys5.InputName(1);
-% S6 = sumblk("e \Phi dot = \delta \Phi cmd - \delta \Phi");
-% 
-% sys6 = connect(sys5, K_PhiP, S5, S6, ...
-%     [S6.InputName(1); sys5.InputName(2)], sys5.OutputName);
-% 
-% % PI-controller
-% integrator = tf(1, [1, 0]);
-% integrator.InputName = "e \Phi dot";
-% integrator.OutputName = "yI";
-% 
-% S5 = sumblk("\delta \xi input = yK \Phi P + yI");
-% 
-% sys7 = connect(sys5, K_PhiP, integrator, S5, S6, ...
-%     [S6.InputName(1); sys5.InputName(2)], sys5.OutputName);
-
-
-% Design 2:
-% Only P-controller
-% First, calculate gain margin
-[Gm, Pm, Wcg, Wcp] = margin(-sys5('\delta \Phi', '\delta \xi input'));
-K_PhiP = tf(-Gm / db2mag(6));  % gain margin of S (requirement: 6 dB gain margin)
-%K_PhiP = tf(0.002);  % from root locus
-%K_PhiP = tf(-0.025);  % from root locus
-%K_PhiP = tf(-0.049);  % from root locus
-K_PhiP.InputName = "e \Phi dot";
-K_PhiP.OutputName = "yK \Phi P";
-
-S5 = tf(1); S5.InputName = K_PhiP.OutputName; S5.OutputName = sys5.InputName(1);
-S6 = sumblk("e \Phi dot = \delta \Phi cmd - \delta \Phi");
-
-sys6 = connect(sys5, K_PhiP, S5, S6, ...
-    [S6.InputName(1); sys5.InputName(2)], sys5.OutputName);
-
-% PI-controller
-%K_PhiP = -Gm / db2mag(6);
-K_PhiP = Gm / db2mag(6);
-%K_PhiI = 1;
-K_PhiI = 10;
-PI = (K_PhiP*s + K_PhiI) / s;
-PI.InputName = "yK";
-PI.OutputName = "\delta \xi input";
-
-ol = connect(sys5, PI, ...
-    [PI.InputName; sys5.InputName(2)], sys5.OutputName);
-
-% sys7_2 = connect(sys5, PI, S6, ...
-%     [S6.InputName(1); sys5.InputName(2)], sys5.OutputName);
-
-% Required gain margin (6 dB can easily be achieved)
-% Design to fulfil required phase margin (45°)
-W = logspace(-3, 2, 100000);
-[MAG, PHASE] = bode(-ol('\delta \Phi', 'yK'), W);
-MAG = squeeze(MAG); PHASE = squeeze(PHASE);
-
-[~, idx] = min(abs(PHASE - (45 - 180)));
-mag = MAG(idx);
-K = tf(-1/mag);
-K.InputName = "e \Phi dot";
-K.OutputName = "yK";
-
-sys7 = connect(ol, K, S6, ...
-    [S6.InputName(1); sys5.InputName(2)], ...
-    sys5.OutputName);
+sys2cl = connect(sys1cl, K_xip, S4, ...
+    [S4.InputName(1); sys1cl.InputName(2)], sys1cl.OutputName);
 
 % DONE.
 
 
-%% Part 6) Feedforward controller - Roll command
+%% Part 5) Outer Loop - Bank Angle Command
+
+S5 = sumblk("e \Phi dot = \delta \Phi cmd - \delta \Phi");
+
+% PI compensator
+G_Phixiinput = sys2cl('\delta \Phi','\delta \xi input');
+
+% opts = pidtuneOptions('PhaseMargin', 45, 'DesignFocus', 'reference-tracking');
+% [PI_comp, info_PI] = pidtune(G_Phixiinput, 'PI', opts);
+% [PI_comp, info_PI] = pidtune(G_Phixiinput, 'PI', 2);  % good
+[PI_comp, info_PI] = pidtune(G_Phixiinput, 'PI', 2.2);
+PI_comp.InputName = "e \Phi dot";
+PI_comp.OutputName = "\delta \xi input";
+
+% -> Gm = 6.23 dB, Pm = 60°
+
+sys3_PIcl = connect(sys2cl, PI_comp, S5, ...
+    [S5.InputName(1); sys2cl.InputName(2)], sys2cl.OutputName);
+
+% DONE.
 
 
+%% Part 6) Feedforward controller
+
+G_PhiPhicmd = sys3_PIcl('\delta \Phi','\delta \Phi cmd');
+
+% opts = pidtuneOptions('PhaseMargin', 45, 'DesignFocus', 'reference-tracking');
+% [PI_FF, info_PIFF] = pidtune(G_PhiPhicmd, 'PI', opts)
+zPI_FF = -2.2;
+PI_FF = ((-1/zPI_FF)*s + 1) / s;
+PI_FF.InputName = "p cmd";
+PI_FF.OutputName = "\delta \Phi cmd";
+
+% -> Gm = 6.27 dB, Pm = 84.7°
+
+figure(); bode(PI_FF * G_PhiPhicmd); grid on;
+set(findall(gcf, 'Type', 'Line'), 'LineWidth', 1.5, 'MarkerSize', 9)
+
+% Open loop
+sys4 = connect(sys3_PIcl, PI_FF, ...
+    [PI_FF.InputName; sys3_PIcl.InputName(2)], ...
+    [sys3_PIcl.OutputName; PI_FF.OutputName]);
+
+% DONE.
 
 
+%%
+% Sim
+t = 0:0.01:20;
+u = [deg2rad(50); 0] * ((t>1) - (t>10));
+y = lsim(sys4([1:5, 8, 9, 10],:), u, t);
+convFactor = (180/pi) * ones(1, 8); convFactor(5) = 1;
+y = y * diag(convFactor);
+
+% figure();
+% subplot(5, 1, 1); plot(t, y(:,1), 'LineWidth', 1.5); grid on;
+% ylabel('r, °/s');
+% title('Output');
+% subplot(5, 1, 2); plot(t, y(:,2), 'LineWidth', 1.5); grid on;
+% ylabel('beta, °');
+% subplot(5, 1, 3); plot(t, y(:,3), 'LineWidth', 1.5); grid on;
+% ylabel('p, °/s');
+% subplot(5, 1, 4); plot(t, y(:,4), 'LineWidth', 1.5); grid on;
+% hold on; plot(t, y(:,8), 'LineWidth', 1.5);
+% ylabel('Phi, °');
+% subplot(5, 1, 5); plot(t, y(:,5), 'LineWidth', 1.5); grid on;
+% ylabel('b_y');
+% xlabel('Time, s');
+
+% figure();
+% subplot(2, 1, 1); plot(t, y(:,6), 'LineWidth', 1.5); grid on;
+% ylabel('xi, °');
+% subplot(2, 1, 2); plot(t, y(:,7), 'LineWidth', 1.5); grid on;
+% ylabel('zeta, °');
+% xlabel('Time, s');
 
 
+figure(); hold on
+plot(t, y(:,4), 'LineWidth', 1.5);
+plot(t, y(:,8), 'LineWidth', 1.5);
+yline(60, 'k--');
+grid on
+legend('Phi', 'Phi cmd', '60°', 'Location', 'best');
+ylabel('Phi, °');
+xlabel('Time, s');
 
 
+disp([num2str((max(y(:,4)) - y(end,4))*100 / y(end,4)), '%']);
 
 
+%% Display all gain values
 
+% Part 2
+disp(['K_zetaxi = ', num2str(dcgain(K_zetaxi))]);
+disp(['K_xizeta = ', num2str(dcgain(K_xizeta))]);
 
-%% Test sim
-t = 0:0.01:100;
-u_xi = [1; 0] * ones(size(t));  % step aileron only
-u_zeta = [0; 1] * ones(size(t));  % step rudder only
-%lsim(sys1, u, t); grid on; set(findall(gcf,'Type','Line'),'LineWidth',1.5,'MarkerSize',9)
+% Part 3
+disp(['K_zetar = ', num2str(-k_zetar)]);
+
+% Part 4
+disp(['K_xip = ', num2str(-k_xip)]);
+
+% Part 5
+[num_PI, ~] = tfdata(PI_comp, 'v');
+disp(['K_PhiP = ', num2str(num_PI(1))]);
+disp(['K_PhiI = ', num2str(num_PI(2))]);
+
+% Part 6
+[num_FF, ~] = tfdata(PI_FF, 'v');
+disp(['K_Phi = ', num2str(num_FF(1))]);

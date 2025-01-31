@@ -19,13 +19,15 @@ dH = 2;  % Altitude in m
 dPhi = 5;  % Bank angle in degrees
 dV = 2.5;  % True airspeed in m/s
 
+% Relevant variables for import
+columns = [2, 3, 6, 8, 16, 25, 26, 31, 32, 33, 37, 38, 39];
+
 
 %% Part a) Open loop Aircraft - Import Data
 
-path = './flight_data/Flugversuch_ol2_stabil.xlsx';
+path = './flight_data/Flugversuch_ol.xlsx';
 % path = './flight_data/Flugversuch_ol1.xlsx';
 opts = detectImportOptions(path);
-columns = [2, 3, 6, 8, 16, 25, 26, 31, 32, 33, 37, 38, 39];
 opts.SelectedVariableNames = columns;
 variable_names = opts.VariableNames(columns);
 data_ol = readmatrix(path, opts);  % 10184 x 13
@@ -55,36 +57,20 @@ V = data_ol(idx_start:idx_end,5);
 plot_flight_data(t_sim, V, 'V', V0, dV);
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 %% Part b) Closed-loop Aircraft
-path = './flight_data/Flugversuch_cl6_stabilste.xlsx';
+path = './flight_data/Flugversuch_cl.xlsx';
 opts = detectImportOptions(path);
 opts.SelectedVariableNames = columns;
 data_cl = readmatrix(path, opts);
 
-t_start = 24;  % file: cl6_stabilste
-[idx_start, idx_end] = find_index(data_ol(:,1), t_start, data_ol(:,7));
+t_start = 10;  % file: cl_final2
+[idx_start, idx_end] = find_index(data_cl(:,1), t_start, data_cl(:,7));
 
-t_sim = data_ol(idx_start:idx_end,1);  % Relevant time
+t_sim = data_cl(idx_start:idx_end,1);  % Relevant time
 t_sim = t_sim - t_sim(1);
 
 
-%% Part a) Closed-loop Aircraft - Evaluation
+%% Part b) Closed-loop Aircraft - Evaluation
 
 % Plots
 
