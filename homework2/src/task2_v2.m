@@ -70,7 +70,8 @@ Krlocus = linspace(0.13, 0.3, 1000);
 R = rlocus(-sys1('\delta rf','\delta \zeta cmd'), Krlocus);
 zeta_DR = -cos(angle(R(find(imag(R(:,1)) ~= 0, 1),:)));
 [~, idx] = max(zeta_DR);
-k_zetar = Krlocus(idx);
+% k_zetar = Krlocus(idx);
+k_zetar = 0.08;  % test1: damping 0.3 -> max k_xip 0.0078
 K_zetar = tf(-k_zetar);
 K_zetar.InputName = GF_r.OutputName;
 K_zetar.OutputName = "yK zetar";
@@ -88,7 +89,7 @@ sys1cl = connect(sys1, K_zetar, S3, ...
 % figure(); rlocus(-sys1cl('\delta pf','\delta \xi cmd')); grid on
 % set(findall(gcf, 'Type', 'Line'), 'LineWidth', 1.5, 'MarkerSize', 9)
 
-k_xip = 0.003;
+k_xip = 0.003;  % origin, also test1
 K_xip = tf(-k_xip);
 K_xip.InputName = GF_p.OutputName;
 K_xip.OutputName = "yK xip";
@@ -125,7 +126,8 @@ sys3_P = connect(sys2cl, K_PhiP, S5, ...
 
 % Choose PI zero
 p = esort(pole(sys2cl('\delta \Phi','\delta \xi input')));
-PI_comp = PI_compensator(p(2));  % PI zero at pole location -> cancellation
+% PI_comp = PI_compensator(p(2));  % PI zero at pole location -> cancellation
+PI_comp = PI_compensator(p(1));  % test1, z5 = p(1) sorted, k_PI = 0.0008 (best)
 
 sys3_PI = connect(sys2cl, PI_comp, ...
     [PI_comp.InputName; sys2cl.InputName(2)], sys2cl.OutputName);
@@ -137,8 +139,8 @@ R = rlocus(-sys3_PI('\delta \Phi','uPI'), Krlocus);
 [~, idxI] = min(abs(R(:,1)));
 zeta = -cos(angle(R(idxI,:)));
 [~, idx] = max(zeta);
-k_PI = Krlocus(idx);
-% k_PI = 2.1e-5;
+% k_PI = Krlocus(idx);
+k_PI = 0.0008;  % test1
 K_PI = tf(-k_PI);
 K_PI.InputName = "e \Phi dot";
 K_PI.OutputName = "uPI";
@@ -152,11 +154,11 @@ sys3_PIcl = connect(sys3_PI, K_PI, S5, ...
 
 
 %% Part 6) Feedforward controller
-Gp = series(1/s, sys3_PIcl('\delta p','\delta \Phi cmd'));
 
-% figure(); bode(Gp); grid on; hold on
+% I compensator
+Gp_I = series(1/s, sys3_PIcl('\delta p','\delta \Phi cmd'));
+% figure(); bode(Gp_I); grid on; hold on
 % set(findall(gcf, 'Type', 'Line'), 'LineWidth', 1.5, 'MarkerSize', 9)
-
 
 % k_Phi = 1;
 k_Phi = 2.1498;  % Gm = 9.64 dB, Pm = 45°, wc = 2.921;
@@ -164,13 +166,16 @@ integrator = k_Phi/s;
 integrator.InputName = "p cmd";
 integrator.OutputName = "\delta \Phi cmd";
 
+
 % PI compensator (trial and error)
+Gp_PI = sys3_PIcl('\delta p','\delta \Phi cmd');
+GPhi_PI = sys3_PIcl('\delta \Phi','\delta \Phi cmd');
 % Objective: satisfy margin requirement and increase corner frequency
 % zPI2 = -0.7;  % large overshoot
-zPI2 = -0.9;
-% zPI2 = -1;
+% zPI2 = -0.9;  % original
+zPI2 = -0.295;  % test1
 k_Phi = -1 / zPI2;
-PI_comp2 = tf([(-1/zPI2) 1], [1, 0]);
+PI_comp2 = tf([k_Phi 1], [1, 0]);
 PI_comp2.InputName = "p cmd";
 PI_comp2.OutputName = "\delta \Phi cmd";
 
@@ -226,38 +231,6 @@ xlabel('Time, s');
 disp([num2str((max(y(:,4)) - y(end,4))*100 / y(end,4)), '%']);
 
 
-
-
-
-
-
-
-
-%%
-
-
-% Test sim
-t = 0:0.01:5;
-uMag = deg2rad(2);  % p_cmd = 2°/s
-y = step(uMag * sys4([3, 4, 10],1), t); y = rad2deg(y);
-
-figure();
-subplot(2, 1, 1); plot(t, y(:,1), 'LineWidth', 1.5); grid on;
-ylabel('p, °/s');
-subplot(2, 1, 2); plot(t, y(:,2), 'LineWidth', 1.5); grid on;
-hold on; plot(t, y(:,3), 'LineWidth', 1.5); grid on;
-legend('Phi', 'Phi cmd', 'Location', 'best');
-ylabel('Phi, °');
-xlabel('Time, s');
-
-
-
-
-
-
-
-
-
 %% Display all gain values
 % Part 2
 disp(['K_zetaxi = ', num2str(dcgain(K_zetaxi))]);
@@ -275,7 +248,7 @@ disp(['K_PhiP = ', num2str(numPI(1))]);
 disp(['K_PhiI = ', num2str(numPI(2))]);
 
 % Part 6
-disp(['K_Phi = ', num2str(PI_comp2.Numerator{:}(1))]);
+disp(['K_Phi = ', num2str(k_Phi)]);
 
 
 %% Part 7) VFTE
