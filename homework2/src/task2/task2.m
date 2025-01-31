@@ -8,7 +8,7 @@
 clear all; close all; clc
 
 % Import state-space model of Talon UAV (source: AlphaLink Engineering)
-run('VFTE_state_space');
+run('../VFTE_state_space');
 
 s = tf('s');
 
