@@ -3,6 +3,7 @@ function plot_step_response(sys, inputMag, tEnd, boolSavePlot)
 %   - sys: state space form
 %   - inputMag: input magnitude in degree
 %   - tEnd (optional): end time for simulation in second
+%
 % Author: H. N. Tang
 
 if nargin < 4
