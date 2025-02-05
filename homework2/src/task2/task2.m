@@ -4,10 +4,11 @@
 % and design of control systems for manual and automatic flight
 %
 % Task 2 - Design of a Rate Command/Attitude Hold Controller
+%
 % Author: H. N. Tang
 clear all; close all; clc
 
-% Import state-space model of Talon UAV (source: AlphaLink Engineering)
+% Import state-space model of Nano Talon UAV (source: AlphaLink Engineering)
 run('../VFTE_state_space');
 
 s = tf('s');
@@ -57,7 +58,22 @@ sys1 = connect(K_zetaxi, K_xizeta, sysLatF, S1, S2, ...
     {'\delta \xi cmd', '\delta \zeta cmd'}, ...
     [sysLatF.OutputName; '\delta \xi'; '\delta \zeta']);
 
-% DONE.
+% % Show the improvement
+% t = 0:0.01:50;
+% u = [deg2rad(10); 0] * ones(size(t));
+% y_sysLat = lsim(sysLat(2,:), u, t); y_sysLat = y_sysLat * (180/pi);
+% y_sys1 = lsim(sys1(2,:), u, t); y_sys1 = y_sys1 * (180/pi);
+% 
+% figure(); hold on
+% plot(t, y_sysLat, 'LineWidth', 1.5);
+% plot(t, y_sys1, 'LineWidth', 1.5);
+% grid on
+% ylabel('Sideslip, deg');
+% xlabel('Time, s');
+% legend('original', 'with feedforward controllers', ...
+%     'Location', 'northeast', 'FontSize', 11);
+% 
+% exportgraphics(gcf, "task2.2_coordinated_turn.eps", 'Resolution', 600);
 
 
 %% Part 3) Yaw Damper
@@ -81,7 +97,51 @@ S3 = sumblk("\delta \zeta cmd = \delta \zeta input - yK zetar");
 sys1cl = connect(sys1, K_zetar, S3, ...
     [sys1.InputName(1); S3.InputName(1)], sys1.OutputName);
 
-% DONE.
+% % Show the improvement
+% t = 0:0.01:5;
+% impulse_opts = RespConfig("Amplitude", deg2rad(10));
+% y_sysLat = impulse(sysLat(1:4,2), t, impulse_opts);
+% y_sysLat = rad2deg(y_sysLat);
+% y_sys1cl = impulse(sys1cl(1:4,2), t, impulse_opts);
+% y_sys1cl = rad2deg(y_sys1cl);
+% 
+% tile_plot = tiledlayout(4, 1);
+% 
+% nexttile; hold on
+% plot(t, y_sysLat(:,1), 'LineWidth', 1.5);
+% plot(t, y_sys1cl(:,1), 'LineWidth', 1.5);
+% hold off
+% grid on
+% ylabel('Yaw rate, deg/s');
+% legend('original', 'with yaw damper', ...
+%     'Location', 'southeast', 'FontSize', 11);
+% 
+% nexttile; hold on
+% plot(t, y_sysLat(:,2), 'LineWidth', 1.5);
+% plot(t, y_sys1cl(:,2), 'LineWidth', 1.5);
+% hold off
+% grid on
+% ylabel('Sideslip, deg');
+% 
+% nexttile; hold on
+% plot(t, y_sysLat(:,3), 'LineWidth', 1.5);
+% plot(t, y_sys1cl(:,3), 'LineWidth', 1.5);
+% hold off
+% grid on
+% ylabel('Roll rate, deg/s');
+% 
+% nexttile; hold on
+% plot(t, y_sysLat(:,4), 'LineWidth', 1.5);
+% plot(t, y_sys1cl(:,4), 'LineWidth', 1.5);
+% hold off
+% grid on
+% ylabel('Roll angle, deg');
+% xlabel('Time, s');
+% 
+% tile_plot.TileSpacing = "loose";
+% tile_plot.Padding = "compact";
+% 
+% exportgraphics(gcf, "task2.3_yaw_damper.eps", 'Resolution', 600);
 
 
 %% Part 4) Roll Damper
@@ -99,15 +159,75 @@ S4 = sumblk("\delta \xi cmd = \delta \xi input - yK xip");
 sys2cl = connect(sys1cl, K_xip, S4, ...
     [S4.InputName(1); sys1cl.InputName(2)], sys1cl.OutputName);
 
-% DONE.
+% % Show the improvement
+% t = 0:0.01:10;
+% u = [deg2rad(10); 0] * ((t>1) - 2*(t>3) + (t>5));
+% % y_sysLat = lsim(sysLat('\delta p',:), u, t); y_sysLat = rad2deg(y_sysLat);
+% y_sys1cl = lsim(sys1cl('\delta p',:), u, t); y_sys1cl = rad2deg(y_sys1cl);
+% y_sys2cl = lsim(sys2cl('\delta p',:), u, t); y_sys2cl = rad2deg(y_sys2cl);
+% 
+% tile_plot = tiledlayout(2, 1);
+% 
+% nexttile; hold on
+% plot(t, y_sys1cl, 'LineWidth', 1.5);
+% plot(t, y_sys2cl, 'LineWidth', 1.5);
+% hold off
+% grid on
+% ylabel('Roll rate, deg/s');
+% legend('without roll damper', 'with roll damper', ...
+%     'Location', 'northeast', 'FontSize', 11);
+% 
+% nexttile;
+% plot(t, rad2deg(u(1,:)), 'LineWidth', 1.5, 'LineStyle', '--', 'Color', 'k');
+% grid on
+% ylabel('Aileron input, deg');
+% xlabel('Time, s');
+% 
+% tile_plot.TileSpacing = "loose";
+% tile_plot.Padding = "compact";
+% 
+% exportgraphics(gcf, "task2.4_roll_damper.eps", 'Resolution', 600);
 
 
 %% Part 5) Outer Loop - Bank Angle Command
 
+% Only P-controller
+G_Phixiinput = sys2cl('\delta \Phi','\delta \xi input');
+
+% Pm can be achieved easier -> Calculate K_PhiP for 6 dB-Gm
+S = allmargin(-G_Phixiinput);
+k_PhiP = S.GainMargin(1) / db2mag(6);
+K_PhiP = tf(-k_PhiP);
+K_PhiP.InputName = "e \Phi dot";
+K_PhiP.OutputName = "\delta \xi input";
+
 S5 = sumblk("e \Phi dot = \delta \Phi cmd - \delta \Phi");
 
+% -> Gm = 6 dB, Pm = 80.7°
+
+sys3_Pcl = connect(sys2cl, K_PhiP, S5, ...
+    [S5.InputName(1); sys2cl.InputName(2)], sys2cl.OutputName);
+
+% % Show the improvement
+% t = 0:0.01:10;
+% %u = [deg2rad(10); 0] * ones(size(t));
+% u = [deg2rad(10); 0] * (t>1);
+% y_sys3_Pcl = lsim(sys3_Pcl('\delta \Phi',:), u, t); y_sys3_Pcl = y_sys3_Pcl * (180/pi);
+% 
+% figure(); hold on
+% plot(t, y_sys3_Pcl, 'LineWidth', 1.5);
+% plot(t, rad2deg(u(1,:)), 'LineWidth', 1.5, 'LineStyle', '--', 'Color', 'k');
+% hold off
+% grid on
+% ylabel('Bank angle, deg');
+% xlabel('Time, s');
+% legend('reponse', 'command', 'FontSize', 11, 'Location', 'southeast');
+% 
+% exportgraphics(gcf, "task2.5.1.P_controller.eps", 'Resolution', 600);
+
+
 % PI compensator
-G_Phixiinput = sys2cl('\delta \Phi','\delta \xi input');
+% G_Phixiinput = sys2cl('\delta \Phi','\delta \xi input');
 
 % opts = pidtuneOptions('PhaseMargin', 45, 'DesignFocus', 'reference-tracking');
 % [PI_comp, info_PI] = pidtune(G_Phixiinput, 'PI', opts);
@@ -121,7 +241,24 @@ PI_comp.OutputName = "\delta \xi input";
 sys3_PIcl = connect(sys2cl, PI_comp, S5, ...
     [S5.InputName(1); sys2cl.InputName(2)], sys2cl.OutputName);
 
-% DONE.
+% % Show the improvement
+% t = 0:0.01:10;
+% %u = [deg2rad(10); 0] * ones(size(t));
+% u = [deg2rad(10); 0] * (t>1);
+% y_sys3_Pcl = lsim(sys3_Pcl('\delta \Phi',:), u, t); y_sys3_Pcl = y_sys3_Pcl * (180/pi);
+% y_sys3_PIcl = lsim(sys3_PIcl('\delta \Phi',:), u, t); y_sys3_PIcl = y_sys3_PIcl * (180/pi);
+% 
+% figure(); hold on
+% plot(t, y_sys3_Pcl, 'LineWidth', 1.5);
+% plot(t, y_sys3_PIcl, 'LineWidth', 1.5);
+% plot(t, rad2deg(u(1,:)), 'LineWidth', 1.5, 'LineStyle', '--', 'Color', 'k');
+% hold off
+% grid on
+% ylabel('Bank angle, deg');
+% xlabel('Time, s');
+% legend('P-controller', 'PI-controller', 'command', 'FontSize', 11, 'Location', 'southeast');
+% 
+% exportgraphics(gcf, "task2.5.P_and_PI.eps", 'Resolution', 600);
 
 
 %% Part 6) Feedforward controller
@@ -137,59 +274,37 @@ PI_FF.OutputName = "\delta \Phi cmd";
 
 % -> Gm = 6.27 dB, Pm = 84.7°
 
-figure(); bode(PI_FF * G_PhiPhicmd); grid on;
-set(findall(gcf, 'Type', 'Line'), 'LineWidth', 1.5, 'MarkerSize', 9)
+% figure(); bode(PI_FF * G_PhiPhicmd); grid on;
+% set(findall(gcf, 'Type', 'Line'), 'LineWidth', 1.5, 'MarkerSize', 9)
 
 % Open loop
 sys4 = connect(sys3_PIcl, PI_FF, ...
     [PI_FF.InputName; sys3_PIcl.InputName(2)], ...
     [sys3_PIcl.OutputName; PI_FF.OutputName]);
 
-% DONE.
-
-
-%%
-% Sim
-t = 0:0.01:20;
-u = [deg2rad(50); 0] * ((t>1) - (t>10));
-y = lsim(sys4([1:5, 8, 9, 10],:), u, t);
-convFactor = (180/pi) * ones(1, 8); convFactor(5) = 1;
-y = y * diag(convFactor);
-
+% % Show the improvement
+% t = 0:0.01:20;
+% u = [deg2rad(10); 0] * ((t>1) - (t>3));
+% y_sys4 = lsim(sys4([4, 10],:), u, t); y_sys4 = rad2deg(y_sys4);
+% 
 % figure();
-% subplot(5, 1, 1); plot(t, y(:,1), 'LineWidth', 1.5); grid on;
-% ylabel('r, °/s');
-% title('Output');
-% subplot(5, 1, 2); plot(t, y(:,2), 'LineWidth', 1.5); grid on;
-% ylabel('beta, °');
-% subplot(5, 1, 3); plot(t, y(:,3), 'LineWidth', 1.5); grid on;
-% ylabel('p, °/s');
-% subplot(5, 1, 4); plot(t, y(:,4), 'LineWidth', 1.5); grid on;
-% hold on; plot(t, y(:,8), 'LineWidth', 1.5);
-% ylabel('Phi, °');
-% subplot(5, 1, 5); plot(t, y(:,5), 'LineWidth', 1.5); grid on;
-% ylabel('b_y');
+% subplot(2, 1, 1); hold on
+% plot(t, y_sys4(:,1), 'LineWidth', 1.5);
+% plot(t, y_sys4(:,2), 'LineWidth', 1.5);
+% hold off
+% grid on
+% ylabel('Bank angle, deg');
+% legend('True bank angle', 'Commanded bank angle', 'FontSize', 11, 'Location', 'southeast');
+% subplot(2, 1, 2);
+% plot(t, rad2deg(u(1,:)), 'LineWidth', 1.5, 'LineStyle', '--', 'Color', 'k');
+% grid on
+% ylabel('Commanded roll rate, deg/s');
 % xlabel('Time, s');
-
-% figure();
-% subplot(2, 1, 1); plot(t, y(:,6), 'LineWidth', 1.5); grid on;
-% ylabel('xi, °');
-% subplot(2, 1, 2); plot(t, y(:,7), 'LineWidth', 1.5); grid on;
-% ylabel('zeta, °');
-% xlabel('Time, s');
-
-
-figure(); hold on
-plot(t, y(:,4), 'LineWidth', 1.5);
-plot(t, y(:,8), 'LineWidth', 1.5);
-yline(60, 'k--');
-grid on
-legend('Phi', 'Phi cmd', '60°', 'Location', 'best');
-ylabel('Phi, °');
-xlabel('Time, s');
-
-
-disp([num2str((max(y(:,4)) - y(end,4))*100 / y(end,4)), '%']);
+% 
+% exportgraphics(gcf, "task2.6.PI_FF.eps", 'Resolution', 600);
+% 
+% disp(['Percent overshoot in bank angle: ', ...
+%     num2str((max(y_sys4(:,1)) - y_sys4(end,1))*100 / y_sys4(end,1)), '%']);
 
 
 %% Display all gain values
